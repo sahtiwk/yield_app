@@ -70,4 +70,5 @@ abstract interface class HarvestCaseRepository {
   HarvestCase createDraft();
   List<Crop> get crops;
   Future<HarvestCase> confirm(HarvestCase draft);
+  Future<List<HarvestCase>> getActiveCases();
 }

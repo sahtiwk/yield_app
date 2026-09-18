@@ -3,15 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app/theme/app_theme.dart';
-import '../../features/settings/presentation/settings_controller.dart';
+import '../../features/home/presentation/home_controller.dart';
 import 'components.dart';
 
 const destinations = [
   (
     path: '/',
-    label: 'Settings',
-    title: 'Language & voice',
-    icon: Icons.translate,
+    label: 'Home',
+    title: 'Dashboard',
+    icon: Icons.home_outlined,
   ),
   (
     path: '/register',

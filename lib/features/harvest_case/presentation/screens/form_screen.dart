@@ -1,17 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:go_router/go_router.dart';
+
 import '../../../../core/widgets/components.dart';
 import '../../domain/harvest_case.dart';
 import '../controllers/harvest_controller.dart';
 
-class HarvestEditor extends ConsumerStatefulWidget {
-  const HarvestEditor({super.key});
+class FormScreen extends ConsumerStatefulWidget {
+  const FormScreen({super.key});
   @override
-  ConsumerState<HarvestEditor> createState() => _HarvestEditorState();
+  ConsumerState<FormScreen> createState() => _FormScreenState();
 }
 
-class _HarvestEditorState extends ConsumerState<HarvestEditor> {
+class _FormScreenState extends ConsumerState<FormScreen> {
   final _form = GlobalKey<FormState>();
   late HarvestCase _draft;
   late final TextEditingController _weight, _location, _plan;
@@ -33,26 +35,20 @@ class _HarvestEditorState extends ConsumerState<HarvestEditor> {
   }
 
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
-    child: ConstrainedBox(
-      constraints: BoxConstraints(
-        maxHeight: MediaQuery.sizeOf(context).height * .88,
-      ),
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(24, 8, 24, 30),
-        child: Form(
-          key: _form,
-          child: StackItems(
+  Widget build(BuildContext context) => SingleChildScrollView(
+    padding: const EdgeInsets.all(24),
+    child: Form(
+      key: _form,
+      child: StackItems(
             children: [
-              Heading(
-                'Edit harvest facts',
-                trailing: IconButton(
-                  tooltip: 'Cancel editing',
-                  onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.close),
-                ),
+            Heading(
+              'Register harvest details',
+              trailing: IconButton(
+                tooltip: 'Cancel',
+                onPressed: () => context.go('/'),
+                icon: const Icon(Icons.close),
               ),
+            ),
               DropdownButtonFormField<String>(
                 isExpanded: true,
                 initialValue: _draft.crop.id,
@@ -191,27 +187,25 @@ class _HarvestEditorState extends ConsumerState<HarvestEditor> {
                 validator: (s) =>
                     s == null || s.trim().isEmpty ? 'Enter a location' : null,
               ),
-              PrimaryButton(
-                'Save crop facts',
-                icon: Icons.check,
-                onPressed: () {
-                  if (!_form.currentState!.validate()) return;
-                  ref
-                      .read(draftProvider.notifier)
-                      .update(
-                        _draft.copyWith(
-                          quantityKg: double.parse(_weight.text),
-                          location: _location.text.trim(),
-                          currentPlan: _plan.text.trim(),
-                        ),
-                      );
-                  Navigator.pop(context);
-                },
-              ),
-            ],
-          ),
+            PrimaryButton(
+              'Review facts',
+              icon: Icons.arrow_forward,
+              onPressed: () {
+                if (!_form.currentState!.validate()) return;
+                ref
+                    .read(draftProvider.notifier)
+                    .update(
+                      _draft.copyWith(
+                        quantityKg: double.parse(_weight.text),
+                        location: _location.text.trim(),
+                        currentPlan: _plan.text.trim(),
+                      ),
+                    );
+                context.go('/confirm');
+              },
+            ),
+          ],
         ),
       ),
-    ),
   );
 }

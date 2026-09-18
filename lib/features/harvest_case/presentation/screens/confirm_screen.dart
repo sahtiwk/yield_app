@@ -4,25 +4,18 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_theme.dart';
 import '../../../../core/widgets/components.dart';
-import '../../../settings/presentation/settings_controller.dart';
+import '../../../home/presentation/home_controller.dart';
 import '../controllers/harvest_controller.dart';
-import '../widgets/harvest_editor.dart';
 
-class RegisterScreen extends ConsumerWidget {
-  const RegisterScreen({super.key});
+class ConfirmScreen extends ConsumerWidget {
+  const ConfirmScreen({super.key});
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final draft = ref.watch(draftProvider);
     final session = ref.watch(sessionProvider);
     final prefs = ref.watch(preferencesProvider);
     final busy = session.isLoading;
-    void edit() => showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      showDragHandle: true,
-      builder: (_) => const HarvestEditor(),
-    );
+    void edit() => context.go('/register');
     Future<void> confirm() async {
       final success = await ref.read(sessionProvider.notifier).confirm();
       if (context.mounted && success) context.go('/decisions');

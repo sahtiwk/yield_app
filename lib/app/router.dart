@@ -1,16 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../core/widgets/app_shell.dart';
-import '../features/settings/presentation/settings_screen.dart';
-import '../features/harvest_case/presentation/screens/register_screen.dart';
+import '../features/home/presentation/home_screen.dart';
+import '../features/harvest_case/presentation/screens/form_screen.dart';
+import '../features/harvest_case/presentation/screens/confirm_screen.dart';
 import '../features/recommendation/presentation/recommendation_screen.dart';
 import '../features/monitor/presentation/monitor_screen.dart';
 
 GoRouter createRouter() => GoRouter(
   routes: [
     for (final route in <({String path, Widget screen})>[
-      (path: '/', screen: const SettingsScreen()),
-      (path: '/register', screen: const RegisterScreen()),
+      (path: '/', screen: const HomeScreen()),
+      (path: '/register', screen: const FormScreen()),
+      (path: '/confirm', screen: const ConfirmScreen()),
       (path: '/decisions', screen: const RecommendationScreen()),
       (path: '/monitor', screen: const MonitorScreen()),
     ])

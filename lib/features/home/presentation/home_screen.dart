@@ -4,7 +4,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/theme/app_theme.dart';
 import '../../../core/widgets/components.dart';
-import 'settings_controller.dart';
+import '../../harvest_case/presentation/controllers/harvest_controller.dart';
+import 'home_controller.dart';
 
 const _languages = [
   (
@@ -46,8 +47,8 @@ const _languages = [
   ),
 ];
 
-class SettingsScreen extends ConsumerWidget {
-  const SettingsScreen({super.key});
+class HomeScreen extends ConsumerWidget {
+  const HomeScreen({super.key});
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final prefs = ref.watch(preferencesProvider);
@@ -92,6 +93,7 @@ class SettingsScreen extends ConsumerWidget {
             ],
           ),
         ),
+        _ActiveCasesPanel(),
         ResponsiveColumns(
           main: StackItems(
             children: [
@@ -156,6 +158,59 @@ class SettingsScreen extends ConsumerWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _ActiveCasesPanel extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final asyncCases = ref.watch(activeCasesProvider);
+
+    return Panel(
+      child: StackItems(
+        gap: 12,
+        children: [
+          const Heading('Your Active Cases', icon: Icons.inventory_2_outlined),
+          asyncCases.when(
+            data: (cases) {
+              if (cases.isEmpty) {
+                return const Notice(
+                  'No active cases yet. Register a new harvest below.',
+                  icon: Icons.info_outline,
+                );
+              }
+              return Column(
+                children: cases.map((c) => Panel(
+                  color: Palette.surface,
+                  padding: 12,
+                  child: Row(
+                    children: [
+                      const Icon(Icons.inventory, color: Palette.green),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Case #${c.id} · ${c.crop.name}',
+                              style: const TextStyle(fontWeight: FontWeight.w700),
+                            ),
+                            Text('${c.quantityKg.toStringAsFixed(0)} kg · ${c.location}'),
+                          ],
+                        ),
+                      ),
+                      Tag(c.status, color: Palette.pale),
+                    ],
+                  ),
+                )).toList(),
+              );
+            },
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, s) => Text('Error loading cases: $e'),
+          ),
+        ],
+      ),
     );
   }
 }

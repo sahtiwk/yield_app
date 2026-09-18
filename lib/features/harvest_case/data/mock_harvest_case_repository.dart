@@ -2,6 +2,8 @@ import '../domain/harvest_case.dart';
 import '../../../shared/models/crop.dart';
 
 class MockHarvestCaseRepository implements HarvestCaseRepository {
+  final List<HarvestCase> _activeCases = [];
+
   @override
   final crops = const [
     Crop(id: 'tomato', name: 'Tomato', variety: 'Hybrid red'),
@@ -10,19 +12,20 @@ class MockHarvestCaseRepository implements HarvestCaseRepository {
   ];
   @override
   HarvestCase createDraft() => HarvestCase(
-    id: 'HT-2048',
+    id: 'HT-${DateTime.now().millisecondsSinceEpoch % 10000}',
     crop: crops.first,
     quantityKg: 650,
-    location: 'Kurnool, Andhra Pradesh',
+    location: '',
     harvestStatus: 'Harvested',
-    harvestedAt: DateTime(2026, 9, 18, 7, 15),
+    harvestedAt: DateTime.now(),
     urgency: 'Must sell today',
-    farmerCondition: 'Ripe',
-    currentPlan: 'Village mandi',
+    farmerCondition: 'Ready',
+    currentPlan: '',
     constraints: const [
       HarvestConstraint(type: 'same_day_sale_required', value: 'true'),
     ],
   );
+  
   @override
   Future<HarvestCase> confirm(HarvestCase draft) async {
     await Future<void>.delayed(const Duration(milliseconds: 350));
@@ -35,6 +38,19 @@ class MockHarvestCaseRepository implements HarvestCaseRepository {
         'Please check the weight, location and current plan.',
       );
     }
-    return draft.copyWith(status: 'active');
+    final confirmed = draft.copyWith(status: 'active');
+    final index = _activeCases.indexWhere((c) => c.id == confirmed.id);
+    if (index >= 0) {
+      _activeCases[index] = confirmed;
+    } else {
+      _activeCases.add(confirmed);
+    }
+    return confirmed;
+  }
+
+  @override
+  Future<List<HarvestCase>> getActiveCases() async {
+    await Future<void>.delayed(const Duration(milliseconds: 200));
+    return List.unmodifiable(_activeCases);
   }
 }

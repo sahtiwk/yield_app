@@ -15,6 +15,10 @@ final draftProvider = NotifierProvider<DraftController, HarvestCase>(
   DraftController.new,
 );
 
+final activeCasesProvider = FutureProvider<List<HarvestCase>>((ref) {
+  return ref.read(harvestRepositoryProvider).getActiveCases();
+});
+
 class DraftController extends Notifier<HarvestCase> {
   @override
   HarvestCase build() => ref.read(harvestRepositoryProvider).createDraft();
