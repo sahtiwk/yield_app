@@ -1,4 +1,6 @@
 # Miscellaneous
+.tools/
+artifacts/
 *.class
 *.log
 *.pyc
