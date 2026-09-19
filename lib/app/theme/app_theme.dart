@@ -4,7 +4,7 @@ abstract final class Palette {
   static const green = Color(0xFF003F32);
   static const mint = Color(0xFFB8EEDB);
   static const pale = Color(0xFFE4F5EF);
-  static const background = Color(0xFFF6F8F6);
+  static const background = Color(0xFFF7F9FA);
   static const surface = Color(0xFFF0F3F0);
   static const ink = Color(0xFF252D29);
   static const muted = Color(0xFF5D6862);
@@ -15,6 +15,23 @@ abstract final class Palette {
 
 ThemeData buildTheme() => ThemeData(
   useMaterial3: true,
+  appBarTheme: const AppBarTheme(
+    backgroundColor: Colors.white,
+    surfaceTintColor: Colors.transparent,
+    elevation: 0,
+    scrolledUnderElevation: 1,
+  ),
+  navigationBarTheme: NavigationBarThemeData(
+    backgroundColor: Colors.white,
+    indicatorColor: Palette.pale,
+    labelTextStyle: WidgetStateProperty.all(
+      const TextStyle(fontSize: 12, letterSpacing: 0),
+    ),
+  ),
+  navigationRailTheme: const NavigationRailThemeData(
+    backgroundColor: Colors.white,
+    indicatorColor: Palette.pale,
+  ),
   scaffoldBackgroundColor: Palette.background,
   colorScheme: ColorScheme.fromSeed(
     seedColor: Palette.green,
@@ -31,17 +48,17 @@ ThemeData buildTheme() => ThemeData(
   textTheme: const TextTheme(
     headlineLarge: TextStyle(
       fontSize: 30,
-      fontWeight: FontWeight.w800,
+      fontWeight: FontWeight.w700,
       height: 1.2,
       color: Palette.green,
-      letterSpacing: -0.8,
+      letterSpacing: 0,
     ),
     headlineMedium: TextStyle(
-      fontSize: 25,
+      fontSize: 26,
       fontWeight: FontWeight.w700,
       height: 1.25,
       color: Palette.ink,
-      letterSpacing: -0.5,
+      letterSpacing: 0,
     ),
     titleLarge: TextStyle(
       fontSize: 20,
@@ -61,22 +78,30 @@ ThemeData buildTheme() => ThemeData(
     style: FilledButton.styleFrom(
       minimumSize: const Size(48, 54),
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
     ),
   ),
   outlinedButtonTheme: OutlinedButtonThemeData(
     style: OutlinedButton.styleFrom(
       minimumSize: const Size(48, 50),
       side: const BorderSide(color: Color(0xFFDCE3DD)),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
     ),
   ),
   inputDecorationTheme: InputDecorationTheme(
     filled: true,
-    fillColor: Palette.surface,
+    fillColor: Colors.white,
     border: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(10),
-      borderSide: BorderSide.none,
+      borderRadius: BorderRadius.circular(8),
+      borderSide: const BorderSide(color: Color(0xFFDCE3DD)),
+    ),
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(8),
+      borderSide: const BorderSide(color: Color(0xFFDCE3DD)),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(8),
+      borderSide: const BorderSide(color: Palette.green, width: 1.5),
     ),
     contentPadding: const EdgeInsets.all(16),
   ),

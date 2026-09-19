@@ -1,0 +1,10 @@
+begin;
+create extension if not exists pgtap with schema extensions;
+select plan(5);
+select is((select count(*)::integer from public.crop_configs where id in ('tomato','okra','brinjal','onion','potato')),5,'five reference crops available');
+select ok((select bool_and(cardinality(varieties)>=3) from public.crop_configs where is_placeholder),'reference varieties populated');
+select ok((select bool_and(base_decay_per_hour>0 and shelf_life_hours>0 and not reviewed) from public.crop_configs where is_placeholder),'planning parameters do not masquerade as reviewed models');
+select ok((select relrowsecurity from pg_class where oid='public.buyer_options'::regclass),'buyer offers have RLS');
+select ok(not has_table_privilege('authenticated','public.buyer_options','INSERT'),'clients cannot fabricate offers');
+select * from finish();
+rollback;

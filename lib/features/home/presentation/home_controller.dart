@@ -1,4 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+final localPreferencesProvider = Provider<SharedPreferences?>((ref) => null);
 
 class Preferences {
   const Preferences({this.language = 'English', this.voice = true});
@@ -13,9 +16,18 @@ final preferencesProvider =
 
 class PreferencesController extends Notifier<Preferences> {
   @override
-  Preferences build() => const Preferences();
-  void language(String value) =>
-      state = Preferences(language: value, voice: state.voice);
-  void voice(bool value) =>
-      state = Preferences(language: state.language, voice: value);
+  Preferences build() => Preferences(
+    language:
+        ref.read(localPreferencesProvider)?.getString('language') ?? 'English',
+    voice: ref.read(localPreferencesProvider)?.getBool('voice') ?? false,
+  );
+  void language(String value) {
+    state = Preferences(language: value, voice: state.voice);
+    ref.read(localPreferencesProvider)?.setString('language', value);
+  }
+
+  void voice(bool value) {
+    state = Preferences(language: state.language, voice: value);
+    ref.read(localPreferencesProvider)?.setBool('voice', value);
+  }
 }

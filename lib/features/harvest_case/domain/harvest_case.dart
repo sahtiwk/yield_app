@@ -26,6 +26,8 @@ class HarvestCase {
     required this.currentPlan,
     required this.constraints,
     this.status = 'draft',
+    this.latitude,
+    this.longitude,
   });
   final String id;
   final Crop crop;
@@ -38,6 +40,7 @@ class HarvestCase {
   final String currentPlan;
   final List<HarvestConstraint> constraints;
   final String status;
+  final double? latitude, longitude;
 
   HarvestCase copyWith({
     Crop? crop,
@@ -49,6 +52,9 @@ class HarvestCase {
     String? farmerCondition,
     String? currentPlan,
     String? status,
+    double? latitude,
+    double? longitude,
+    bool clearCoordinates = false,
   }) => HarvestCase(
     id: id,
     crop: crop ?? this.crop,
@@ -63,6 +69,8 @@ class HarvestCase {
         ? constraints
         : [HarvestConstraint(type: 'must_sell_by', value: urgency)],
     status: status ?? this.status,
+    latitude: clearCoordinates ? null : latitude ?? this.latitude,
+    longitude: clearCoordinates ? null : longitude ?? this.longitude,
   );
 }
 

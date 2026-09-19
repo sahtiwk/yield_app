@@ -2,25 +2,79 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:yield_app/app/app.dart';
+import 'package:yield_app/core/location/current_location.dart';
+import 'package:yield_app/core/localization/app_localizations.dart';
+import 'package:yield_app/core/localization/decision_translations.dart';
+import 'package:yield_app/features/harvest_case/domain/harvest_case.dart';
 import 'package:yield_app/features/harvest_case/presentation/controllers/harvest_controller.dart';
-import 'package:yield_app/features/settings/presentation/settings_controller.dart';
+import 'package:yield_app/features/home/presentation/home_controller.dart';
+import 'package:yield_app/features/recommendation/domain/recommendation_snapshot.dart';
 
 Future<void> tapVisible(WidgetTester tester, Finder finder) async {
-  await tester.ensureVisible(finder);
+  FocusManager.instance.primaryFocus?.unfocus();
+  await tester.pumpAndSettle();
+  await Scrollable.ensureVisible(tester.element(finder), alignment: .5);
   await tester.pumpAndSettle();
   await tester.tap(finder);
   await tester.pumpAndSettle();
 }
 
+class TestRecommendations implements RecommendationRepository {
+  @override
+  Future<RecommendationSnapshot> evaluate(HarvestCase c) async =>
+      RecommendationSnapshot(
+        caseId: c.id,
+        best: const ScenarioResult(
+          id: 'market-test',
+          name: 'Test market',
+          action: 'direct_buyer',
+          netValue: 12000,
+          low: 10800,
+          high: 13200,
+          distanceKm: 12,
+          travelHours: .5,
+        ),
+        alternatives: const [
+          ScenarioResult(
+            id: 'other-test',
+            name: 'Other test market',
+            action: 'sell_today',
+            netValue: 11000,
+            low: 9900,
+            high: 12100,
+            distanceKm: 18,
+            travelHours: .7,
+          ),
+        ],
+        baselineValue: 11000,
+        valueDifference: 1000,
+        observedAt: DateTime(2026, 9, 19, 10),
+        assumptionCodes: const [
+          'estimate_caution',
+          'reference_decay',
+          'sensitivity_range',
+          'storage_not_ranked',
+          'baseline_unmatched',
+        ],
+        sources: const ['Test source'],
+        temperature: 28,
+        humidity: 65,
+      );
+}
+
 void main() {
   testWidgets(
-    'Full farmer flow preserves edits, shows a snapshot and handles a heat alert',
+    'Current location captures coordinates without manual fields or a plan',
     (tester) async {
-      tester.view.physicalSize = const Size(390, 844);
-      tester.view.devicePixelRatio = 1;
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
-      final container = ProviderContainer();
+      var requests = 0;
+      final container = ProviderContainer(
+        overrides: [
+          currentLocationProvider.overrideWithValue(() async {
+            requests++;
+            return (latitude: 13.55, longitude: 78.5);
+          }),
+        ],
+      );
       addTearDown(container.dispose);
       await tester.pumpWidget(
         UncontrolledProviderScope(
@@ -29,20 +83,54 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      await tapVisible(tester, find.text('తెలుగు'));
-      expect(container.read(preferencesProvider).language, 'Telugu');
-      await tapVisible(tester, find.text('Standard visual mode'));
-      expect(container.read(preferencesProvider).voice, false);
-      await tapVisible(tester, find.text('Continue to register harvest'));
-      expect(find.text('Confirm crop facts'), findsOneWidget);
-      await tapVisible(tester, find.byTooltip('Increase weight by 25 kg'));
-      expect(container.read(draftProvider).quantityKg, 675);
-      await tapVisible(tester, find.text('Manual edit'));
+      await tapVisible(tester, find.text('Register Harvest'));
+      expect(requests, 0);
       await tester.enterText(
         find.widgetWithText(TextFormField, 'Net weight'),
-        '0',
+        '125',
       );
-      await tapVisible(tester, find.text('Save crop facts'));
+      await tapVisible(tester, find.text('Current location'));
+      expect(requests, 1);
+      expect(
+        find.widgetWithText(TextFormField, 'Farm / harvest location'),
+        findsNothing,
+      );
+      await tapVisible(tester, find.text('Review facts'));
+      final draft = container.read(draftProvider);
+      expect(draft.latitude, 13.55);
+      expect(draft.longitude, 78.5);
+      expect(draft.currentPlan, isEmpty);
+      await tapVisible(tester, find.text('Confirm facts & see recommendation'));
+      expect(find.text('Harvest saved'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+  test('All decision messages have four nonempty translations', () {
+    for (final translations in decisionTranslations.values) {
+      expect(translations.length, 4);
+      expect(translations.every((text) => text.trim().isNotEmpty), true);
+    }
+  });
+  testWidgets(
+    'Registration validates, saves and shows a truthful unavailable state',
+    (tester) async {
+      final container = ProviderContainer(
+        overrides: [
+          currentLocationProvider.overrideWithValue(
+            () async => throw StateError('denied'),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const HarvestTwinApp(),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tapVisible(tester, find.text('Register Harvest'));
+      await tapVisible(tester, find.text('Review facts'));
       expect(
         find.text('Enter a weight between 1 and 100,000 kg'),
         findsOneWidget,
@@ -51,77 +139,98 @@ void main() {
         find.widgetWithText(TextFormField, 'Net weight'),
         '725',
       );
-      await tapVisible(tester, find.text('Save crop facts'));
-      expect(container.read(draftProvider).quantityKg, 725);
-      await tester.ensureVisible(
-        find.text('Confirm facts & see recommendation'),
-      );
-      await tester.tap(find.text('Confirm facts & see recommendation'));
-      await tester.pump();
-      expect(find.byType(LinearProgressIndicator), findsOneWidget);
-      await tester.pumpAndSettle(const Duration(milliseconds: 200));
-      expect(find.text('SELL TODAY'), findsOneWidget);
+      expect(find.text('Your current selling plan'), findsNothing);
       expect(
-        container.read(sessionProvider).requireValue!.harvestCase.quantityKg,
-        725,
+        find.widgetWithText(TextFormField, 'Farm / harvest location'),
+        findsNothing,
       );
-      await tapVisible(tester, find.text('Estimate details & assumptions'));
+      await tapVisible(tester, find.text('Current location'));
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Farm / harvest location'),
+        'Village',
+      );
+      await tapVisible(tester, find.text('Review facts'));
+      expect(find.text('725 kg'), findsOneWidget);
+      await tapVisible(tester, find.text('Confirm facts & see recommendation'));
+      expect(find.text('Harvest saved'), findsOneWidget);
       expect(
-        find.textContaining('Market acceptance, buyer availability'),
-        findsOneWidget,
+        container.read(sessionProvider).requireValue!.recommendation,
+        isNull,
       );
-      await tapVisible(tester, find.text('View route & buyer details'));
-      expect(find.text('Route & buyer details'), findsOneWidget);
-      await tapVisible(tester, find.text('Done'));
-      await tapVisible(tester, find.text('Monitor this harvest'));
-      await tapVisible(tester, find.text('Simulate a 5°C heat spike'));
-      expect(find.text('Recommendation changed!'), findsOneWidget);
-      await tapVisible(tester, find.text('Keep original plan'));
-      await tapVisible(tester, find.text('Review change'));
-      await tapVisible(tester, find.text('Accept route change'));
-      expect(
-        container.read(sessionProvider).requireValue!.decision,
-        contains('accepted'),
-      );
+      expect(find.textContaining('Demo'), findsNothing);
       expect(tester.takeException(), isNull);
     },
   );
-
-  for (final width in [360.0, 390.0, 430.0, 768.0, 1024.0, 1440.0]) {
-    testWidgets('All four screens lay out at $width pixels', (tester) async {
-      tester.view.physicalSize = Size(width, 950);
-      tester.view.devicePixelRatio = 1;
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: const HarvestTwinApp(),
-        ),
-      );
-      await tester.pumpAndSettle();
-      expect(tester.takeException(), isNull);
-      await tapVisible(tester, find.text('Register').last);
-      expect(find.text('Confirm crop facts'), findsOneWidget);
-      expect(tester.takeException(), isNull);
-      await tapVisible(tester, find.text('Confirm facts & see recommendation'));
-      expect(find.text('SELL TODAY'), findsOneWidget);
-      expect(tester.takeException(), isNull);
-      await tapVisible(tester, find.text('Monitor').last);
-      await tapVisible(tester, find.text('Simulate a 5°C heat spike'));
-      expect(find.text('Recommendation changed!'), findsOneWidget);
-      expect(tester.takeException(), isNull);
-    });
+  for (final width in [360.0, 390.0, 768.0, 1024.0, 1440.0]) {
+    for (final language in ['English', 'Hindi', 'Tamil', 'Telugu']) {
+      testWidgets('Localized decisions and monitor fit $language at $width', (
+        tester,
+      ) async {
+        tester.view.physicalSize = Size(width, 950);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        final container = ProviderContainer(
+          overrides: [
+            recommendationRepositoryProvider.overrideWithValue(
+              TestRecommendations(),
+            ),
+          ],
+        );
+        addTearDown(container.dispose);
+        final t = AppStrings(language);
+        container.read(preferencesProvider.notifier).language(language);
+        container
+            .read(draftProvider.notifier)
+            .update(
+              container
+                  .read(draftProvider)
+                  .copyWith(
+                    quantityKg: 725,
+                    location: 'Test village',
+                    currentPlan: 'Other test market',
+                  ),
+            );
+        await container.read(sessionProvider.notifier).confirm();
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: const HarvestTwinApp(),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull);
+        await tapVisible(tester, find.text(t('Decisions')).last);
+        expect(find.text(t('direct_buyer')), findsWidgets);
+        expect(find.text(t.money(12000)), findsWidgets);
+        await tapVisible(
+          tester,
+          find.text(t('Estimate details & assumptions')),
+        );
+        expect(find.text(t('estimate_caution')), findsOneWidget);
+        expect(tester.takeException(), isNull);
+        await tapVisible(tester, find.text(t('Monitor')).last);
+        expect(find.text(t('Ranked options')), findsOneWidget);
+        expect(tester.takeException(), isNull);
+        await tapVisible(tester, find.byTooltip(t('Settings')));
+        expect(find.byType(RadioListTile<String>), findsNWidgets(4));
+        expect(tester.takeException(), isNull);
+        await tester.pumpWidget(const SizedBox());
+      });
+    }
   }
-
-  testWidgets('Unregistered cases show useful empty states', (tester) async {
+  testWidgets('Cases and markets do not manufacture observations', (
+    tester,
+  ) async {
     await tester.pumpWidget(const ProviderScope(child: HarvestTwinApp()));
     await tester.pumpAndSettle();
-    await tapVisible(tester, find.text('Decisions').last);
-    expect(find.text('Your harvest starts here'), findsOneWidget);
-    await tapVisible(tester, find.text('Monitor').last);
-    expect(find.text('Register a harvest'), findsOneWidget);
+    await tapVisible(tester, find.text('My Cases').first);
+    expect(find.text('No harvests yet'), findsOneWidget);
+    await tapVisible(tester, find.text('Home').last);
+    await tapVisible(tester, find.text('Market Prices'));
+    expect(
+      find.text(const AppStrings('English')('No prices available')),
+      findsOneWidget,
+    );
   });
 }
