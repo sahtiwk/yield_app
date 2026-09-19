@@ -7,6 +7,10 @@ import '../../../core/localization/app_localizations.dart';
 import '../../../core/widgets/workspace_widgets.dart';
 import '../../harvest_case/presentation/controllers/harvest_controller.dart';
 import '../domain/recommendation_snapshot.dart';
+import 'decision_tree.dart';
+import 'reference_price_panel.dart';
+import '../../monitor/presentation/harvest_timing_panel.dart';
+import '../../harvest_case/presentation/screens/harvest_selector.dart';
 
 class LiveRecommendationScreen extends ConsumerStatefulWidget {
   const LiveRecommendationScreen({super.key, this.monitor = false});
@@ -63,12 +67,7 @@ class _LiveRecommendationScreenState
           ),
           data: (session) {
             if (session == null) {
-              return FeedbackState(
-                icon: Icons.inventory_2_outlined,
-                title: t('No harvest selected'),
-                action: () => context.go('/cases'),
-                actionLabel: t('My Cases'),
-              );
+              return const HarvestSelector();
             }
             final c = session.harvestCase;
             final r = session.recommendation;
@@ -78,13 +77,26 @@ class _LiveRecommendationScreenState
                 WorkspaceHeading(
                   title: t(widget.monitor ? 'Monitor' : 'Decisions'),
                   subtitle:
-                      '${t(c.crop.name)} · ${c.crop.variety} · ${t.format('weight_value', {'value': t.number(c.quantityKg)})}',
+                      '${t(c.crop.name)} · ${t.externalLabel(c.crop.variety, 'Variety')} · ${t.format('weight_value', {'value': t.number(c.quantityKg)})}',
                   action: IconButton(
                     tooltip: t('Refresh estimate'),
                     onPressed: session.refreshing
                         ? null
                         : () => ref.read(sessionProvider.notifier).refresh(),
                     icon: const Icon(Icons.refresh),
+                  ),
+                ),
+                if (widget.monitor) ...[
+                  const SizedBox(height: 16),
+                  HarvestTimingPanel(key: ValueKey(c.id), harvest: c),
+                ],
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    onPressed: () =>
+                        ref.read(sessionProvider.notifier).clearSelection(),
+                    icon: const Icon(Icons.swap_horiz),
+                    label: Text(t('change_harvest')),
                   ),
                 ),
                 const SizedBox(height: 24),
@@ -109,10 +121,21 @@ class _LiveRecommendationScreenState
                   if (!session.refreshing)
                     FeedbackState(
                       icon: Icons.task_alt,
-                      title: t('Harvest saved'),
+                      title: t('estimate_pending'),
                     ),
                   Text('${t('Selling deadline')}: ${t(c.urgency)}'),
                   Text('${t('Quality assessment')}: ${t(c.farmerCondition)}'),
+                ] else if (r.isReference) ...[
+                  if (widget.monitor)
+                    ExpansionTile(
+                      key: ValueKey('price-${c.id}'),
+                      title: Text(t('reference_price')),
+                      children: [
+                        ReferencePricePanel(harvest: c, quote: r, t: t),
+                      ],
+                    )
+                  else
+                    ReferencePricePanel(harvest: c, quote: r, t: t),
                 ] else ...[
                   if (session.changed) ...[
                     StatusMessage(
@@ -141,7 +164,7 @@ class _LiveRecommendationScreenState
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          r.best.name,
+                          t.externalLabel(r.best.name, 'market_destination'),
                           style: Theme.of(context).textTheme.titleLarge,
                         ),
                         Text(
@@ -224,7 +247,11 @@ class _LiveRecommendationScreenState
                       for (final source in r.sources)
                         Padding(
                           padding: const EdgeInsets.only(top: 8),
-                          child: SelectableText(source),
+                          child: SelectableText(
+                            source.startsWith('https://')
+                                ? source
+                                : t.externalLabel(source, 'source_record'),
+                          ),
                         ),
                     ],
                   ),
@@ -234,6 +261,8 @@ class _LiveRecommendationScreenState
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ],
+                const SizedBox(height: 24),
+                DecisionTree(session: session, t: t),
                 const SizedBox(height: 24),
                 if (widget.monitor)
                   Text(
@@ -331,7 +360,7 @@ class _ScenarioTile extends StatelessWidget {
               alignment: WrapAlignment.spaceBetween,
               children: [
                 Text(
-                  scenario.name,
+                  t.externalLabel(scenario.name, 'market_destination'),
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 Text(

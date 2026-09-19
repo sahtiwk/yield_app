@@ -51,9 +51,14 @@ void main() {
         const AppFailure('estimate_unavailable'),
       );
       await Future<void>.delayed(Duration.zero);
+      expect(container.read(sessionProvider).requireValue!.issue, isNull);
       expect(
-        container.read(sessionProvider).requireValue!.issue,
-        'estimate_unavailable',
+        container
+            .read(sessionProvider)
+            .requireValue!
+            .recommendation!
+            .isReference,
+        true,
       );
     },
   );
@@ -103,7 +108,7 @@ void main() {
     },
   );
   test(
-    'An unavailable estimate never discards a saved harvest or invents returns',
+    'Offline harvest uses a dated reference without inventing net returns',
     () async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
@@ -122,8 +127,12 @@ void main() {
       await Future<void>.delayed(Duration.zero);
       final session = container.read(sessionProvider).requireValue!;
       expect(session.harvestCase.quantityKg, 940);
-      expect(session.recommendation, isNull);
-      expect(session.issue, 'connection_required');
+      expect(session.recommendation!.isReference, true);
+      expect(session.recommendation!.referenceUnitPrice, 10);
+      expect(session.recommendation!.best.netValue, 9400);
+      expect(session.recommendation!.baselineValue, isNull);
+      expect(session.recommendation!.temperature, isNull);
+      expect(session.issue, isNull);
       expect(
         (await container.read(activeCasesProvider.future)).single.quantityKg,
         940,

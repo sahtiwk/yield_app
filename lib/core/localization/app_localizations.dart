@@ -16,6 +16,22 @@ final stringsProvider = Provider<AppStrings>(
 class AppStrings {
   const AppStrings(this.language);
   final String language;
+  String externalLabel(String value, String fallback) {
+    if (language == 'English' ||
+        decisionTranslations.containsKey(value) ||
+        _translations.containsKey(value)) {
+      return call(value);
+    }
+    return call(fallback);
+  }
+  // Force analyzer update
+
+  String preciseMoney(num value) => NumberFormat.currency(
+    locale: locale,
+    symbol: '₹',
+    decimalDigits: value % 1 == 0 ? 0 : 2,
+  ).format(value);
+  String day(DateTime value) => DateFormat.yMMMd(locale).format(value);
   String get locale =>
       const {
         'English': 'en_IN',

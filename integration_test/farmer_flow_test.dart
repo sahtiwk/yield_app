@@ -40,7 +40,7 @@ void main() {
     await tap('Current location');
     await tap('Review facts');
     await tap('Confirm facts & see recommendation');
-    expect(find.text('Harvest saved'), findsOneWidget);
+    expect(find.text('Published price reference'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }

@@ -44,16 +44,22 @@ class RecommendationSnapshot {
     this.valueDifference,
     this.temperature,
     this.humidity,
+    this.referenceUnitPrice,
   });
   final String caseId;
   final ScenarioResult best;
   final List<ScenarioResult> alternatives;
   final double? baselineValue, valueDifference, temperature, humidity;
+  final double? referenceUnitPrice;
+  bool get isReference => referenceUnitPrice != null;
   final DateTime observedAt;
   final List<String> assumptionCodes, sources;
   factory RecommendationSnapshot.fromJson(String id, Map<String, dynamic> d) =>
       RecommendationSnapshot(
         caseId: id,
+        referenceUnitPrice: d['reference_unit_price'] == null
+            ? null
+            : _number(d['reference_unit_price']),
         best: ScenarioResult.fromJson(
           Map<String, dynamic>.from(d['destination'] as Map),
         ),

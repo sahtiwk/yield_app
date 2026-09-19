@@ -3,9 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../app/theme/app_theme.dart';
 import '../../../core/localization/app_localizations.dart';
-import '../../../core/supabase/supabase_client.dart';
 import '../../../core/widgets/workspace_widgets.dart';
 import '../../harvest_case/presentation/controllers/harvest_controller.dart';
+import 'hyderabad_prices.dart';
+import 'market_screen.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -129,25 +130,10 @@ class HomeScreen extends ConsumerWidget {
                   ],
                 ),
         ),
-        if (ref.watch(supabaseClientProvider) == null) ...[
-          const Divider(height: 32),
-          Row(
-            children: [
-              const Icon(
-                Icons.phonelink_ring_outlined,
-                size: 18,
-                color: Palette.muted,
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  t('Saved on this device'),
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-              ),
-            ],
-          ),
-        ],
+        const Divider(height: 40),
+        const MarketScreen(compact: true),
+        const SizedBox(height: 24),
+        const HyderabadPrices(),
       ],
     );
   }

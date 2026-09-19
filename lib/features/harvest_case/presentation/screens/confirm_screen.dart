@@ -28,7 +28,7 @@ class ConfirmScreen extends ConsumerWidget {
             label: 'Net weight',
             value: t.format('weight_value', {'value': t.number(c.quantityKg)}),
           ),
-          (label: 'Variety', value: c.crop.variety),
+          (label: 'Variety', value: t.externalLabel(c.crop.variety, 'Variety')),
           (label: 'Harvest status', value: t(c.harvestStatus)),
           (
             label: 'Harvest date',

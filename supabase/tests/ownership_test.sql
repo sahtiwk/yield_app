@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(12);
+select plan(14);
 insert into auth.users(id,email) values
  ('11111111-1111-4111-8111-111111111111','rls-a@example.test'),
  ('22222222-2222-4222-8222-222222222222','rls-b@example.test');
@@ -11,6 +11,8 @@ select lives_ok($$select public.save_harvest_case('{"id":"rls-case-a","crop_id":
 select is((select count(*)::integer from public.harvest_cases),1,'owner can read case');
 select is((select count(*)::integer from public.harvest_case_constraints),1,'owner can read constraints');
 select lives_ok($$update public.profiles set language_preference='Telugu',is_onboarded=true where id=auth.uid()$$,'owner can onboard');
+select lives_ok($$select public.save_harvest_case('{"id":"rls-case-a","crop_id":"tomato","quantity_kg":50,"location_label":"Village","harvest_status":"Harvest planned","harvested_at":"2099-09-20T06:30:00Z","urgency":"Must sell today","farmer_condition":"Ready","current_plan":"","constraints":[]}')$$,'monitor updates timing through existing RPC');
+select is((select harvest_status || '' || harvested_at::text from public.harvest_cases where id='rls-case-a'),'Harvest planned2099-09-20 06:30:00+00','planned status and date persist on same case');
 select lives_ok($$select public.save_harvest_case('{"id":"rls-case-a","crop_id":"tomato","quantity_kg":50,"location_label":"13.55, 78.5","latitude":13.55,"longitude":78.5,"harvest_status":"Harvested","harvested_at":"2026-09-19T05:00:00Z","urgency":"Must sell today","farmer_condition":"Ready","current_plan":"","constraints":[{"type":"must_sell_by","value":"Must sell today"}]}')$$,'GPS harvest saves without a selling plan');
 select set_config('request.jwt.claims','{"sub":"22222222-2222-4222-8222-222222222222","role":"authenticated"}',true);
 select is((select count(*)::integer from public.harvest_cases),0,'other user cannot read case');

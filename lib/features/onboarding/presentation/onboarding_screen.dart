@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../../../core/supabase/supabase_client.dart';
 import '../../auth/data/auth_controller.dart';
@@ -100,7 +101,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                         await ref
                             .read(authControllerProvider)
                             .saveLanguage(language);
-                        if (mounted) setState(() => message = t('Saved'));
+                        if (context.mounted) context.go('/');
                       } catch (_) {
                         if (mounted) {
                           setState(

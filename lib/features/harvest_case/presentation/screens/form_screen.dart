@@ -116,7 +116,7 @@ class _FormScreenState extends ConsumerState<FormScreen> {
               decoration: InputDecoration(labelText: t('Variety')),
               items: [
                 for (final variety in _draft.crop.varieties)
-                  DropdownMenuItem(value: variety, child: Text(variety)),
+                  DropdownMenuItem(value: variety, child: Text(t(variety))),
               ],
               onChanged: (value) {
                 if (value != null) {
@@ -134,7 +134,7 @@ class _FormScreenState extends ConsumerState<FormScreen> {
               controller: _weight,
               decoration: InputDecoration(
                 labelText: t('Net weight'),
-                suffixText: 'kg',
+                suffixText: t('kilogram'),
               ),
               keyboardType: const TextInputType.numberWithOptions(
                 decimal: true,

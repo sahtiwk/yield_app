@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../../../core/supabase/supabase_client.dart';
+import 'hyderabad_prices.dart';
 
 final marketPricesProvider = FutureProvider<List<Map<String, dynamic>>>((
   ref,
@@ -21,11 +22,13 @@ final marketPricesProvider = FutureProvider<List<Map<String, dynamic>>>((
       .lte('observed_for', DateTime.now().toUtc().toIso8601String())
       .neq('source_type', 'seed')
       .order('observed_for', ascending: false)
-      .limit(100);
+      .limit(100)
+      .timeout(const Duration(seconds: 15));
 });
 
 class MarketScreen extends ConsumerWidget {
-  const MarketScreen({super.key});
+  const MarketScreen({super.key, this.compact = false});
+  final bool compact;
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final t = ref.watch(stringsProvider);
@@ -37,7 +40,9 @@ class MarketScreen extends ConsumerWidget {
             Expanded(
               child: Text(
                 t('Market Prices'),
-                style: Theme.of(context).textTheme.headlineMedium,
+                style: compact
+                    ? Theme.of(context).textTheme.titleLarge
+                    : Theme.of(context).textTheme.headlineMedium,
               ),
             ),
             IconButton(
@@ -60,13 +65,13 @@ class MarketScreen extends ConsumerWidget {
                   ? Text(t('No prices available'))
                   : Column(
                       children: [
-                        for (final row in rows)
+                        for (final row in rows.take(compact ? 5 : 100))
                           ListTile(
                             title: Text(
-                              '${t(row['crop_configs']['name'] as String)} · ${row['destinations']['name']}',
+                              '${t.externalLabel(row['crop_configs']['name'] as String, 'Crop')} · ${t.externalLabel(row['destinations']['name'] as String, 'market_destination')}',
                             ),
                             subtitle: Text(
-                              '${row['source_name']} · ${t.date(DateTime.parse(row['observed_for'] as String))}',
+                              '${t('reported_price')} · ${t.date(DateTime.parse(row['observed_for'] as String))}',
                             ),
                             trailing: Text(
                               t.format('price_unit', {
@@ -77,6 +82,7 @@ class MarketScreen extends ConsumerWidget {
                       ],
                     ),
             ),
+        if (!compact) ...[const Divider(height: 32), const HyderabadPrices()],
       ],
     );
   }

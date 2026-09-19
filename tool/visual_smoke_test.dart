@@ -6,9 +6,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:yield_app/app/app.dart';
+import 'package:yield_app/core/localization/app_localizations.dart';
 import 'package:yield_app/features/home/presentation/home_controller.dart';
 import 'package:yield_app/features/harvest_case/presentation/controllers/harvest_controller.dart';
-import '../test/widget_test.dart' show TestRecommendations;
 
 void main() {
   testWidgets('Capture primary screens with bundled fonts', (tester) async {
@@ -43,13 +43,7 @@ void main() {
         );
       await icons.load();
     });
-    final container = ProviderContainer(
-      overrides: [
-        recommendationRepositoryProvider.overrideWithValue(
-          TestRecommendations(),
-        ),
-      ],
-    );
+    final container = ProviderContainer();
     addTearDown(container.dispose);
     final capture = GlobalKey();
     tester.view.devicePixelRatio = 1;
@@ -114,6 +108,12 @@ void main() {
     await tester.tap(find.byIcon(Icons.sensors).last);
     await tester.pumpAndSettle();
     await save('monitor-tamil-mobile');
+    await Scrollable.ensureVisible(
+      tester.element(find.text(const AppStrings('Tamil')('decision_tree'))),
+    );
+    await tester.tap(find.text(const AppStrings('Tamil')('decision_tree')));
+    await tester.pumpAndSettle();
+    await save('decision-tree-tamil-mobile');
     container.read(preferencesProvider.notifier).language('English');
     await tester.pumpAndSettle();
     tester.view.physicalSize = const Size(1440, 900);
@@ -121,6 +121,13 @@ void main() {
     await tester.tap(find.text('Home').last);
     await tester.pumpAndSettle();
     await save('home-desktop');
+    await Scrollable.ensureVisible(
+      tester.element(
+        find.text(const AppStrings('English')('hyderabad_prices')),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await save('hyderabad-prices-desktop');
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox());
   });

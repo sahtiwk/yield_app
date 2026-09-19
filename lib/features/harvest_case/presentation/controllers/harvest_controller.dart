@@ -6,6 +6,7 @@ import '../../../home/presentation/home_controller.dart';
 import '../../domain/harvest_case.dart';
 import '../../data/local_harvest_case_repository.dart';
 import '../../data/supabase_harvest_case_repository.dart';
+import '../../../recommendation/data/reference_recommendation_repository.dart';
 import '../../../recommendation/domain/recommendation_snapshot.dart';
 import '../../../recommendation/data/supabase_recommendation_repository.dart';
 
@@ -20,8 +21,13 @@ final recommendationRepositoryProvider = Provider<RecommendationRepository>((
 ) {
   final client = ref.watch(supabaseClientProvider);
   return client == null
-      ? UnavailableRecommendationRepository()
-      : SupabaseRecommendationRepository(client);
+      ? ReferenceRecommendationRepository(ref.watch(localPreferencesProvider))
+      : ReferenceFallbackRepository(
+          SupabaseRecommendationRepository(client),
+          ReferenceRecommendationRepository(
+            ref.watch(localPreferencesProvider),
+          ),
+        );
 });
 final draftProvider = NotifierProvider<DraftController, HarvestCase>(
   DraftController.new,
@@ -58,6 +64,12 @@ final sessionProvider =
 
 class SessionController extends Notifier<AsyncValue<CaseSession?>> {
   int _generation = 0;
+  bool _savingTiming = false;
+  void clearSelection() {
+    _generation++;
+    state = const AsyncData(null);
+  }
+
   @override
   AsyncValue<CaseSession?> build() {
     _generation++;
@@ -93,11 +105,54 @@ class SessionController extends Notifier<AsyncValue<CaseSession?>> {
     await refresh();
   }
 
+  Future<bool> updateTiming(String status, DateTime date) async {
+    final current = state.value;
+    if (current == null || state.isLoading || _savingTiming) return false;
+    if (!['Harvested', 'Harvest planned', 'Standing crop'].contains(status) ||
+        (status == 'Harvested' && date.isAfter(DateTime.now()))) {
+      throw const AppFailure('invalid_harvest_date');
+    }
+    final generation = ++_generation;
+    _savingTiming = true;
+    try {
+      final saved = await ref
+          .read(harvestRepositoryProvider)
+          .confirm(
+            current.harvestCase.copyWith(
+              harvestStatus: status,
+              harvestedAt: date,
+            ),
+          );
+      if (!ref.mounted || generation != _generation) return false;
+      ref.invalidate(activeCasesProvider);
+      ref.read(draftProvider.notifier).update(saved);
+      state = AsyncData(CaseSession(harvestCase: saved));
+      _savingTiming = false;
+      unawaited(refresh());
+      return true;
+    } catch (_) {
+      if (ref.mounted && generation == _generation) {
+        state = AsyncData(
+          CaseSession(
+            harvestCase: current.harvestCase,
+            recommendation: current.recommendation,
+          ),
+        );
+      }
+      rethrow;
+    } finally {
+      _savingTiming = false;
+    }
+  }
+
   Future<void> refresh() async {
     final current = state.value;
-    if (current == null || current.refreshing) return;
+    if (current == null || current.refreshing || _savingTiming) return;
     final generation = ++_generation;
     final repository = ref.read(recommendationRepositoryProvider);
+    final reference = ReferenceRecommendationRepository(
+      ref.read(localPreferencesProvider),
+    );
     state = AsyncData(
       CaseSession(
         harvestCase: current.harvestCase,
@@ -106,6 +161,17 @@ class SessionController extends Notifier<AsyncValue<CaseSession?>> {
       ),
     );
     try {
+      if (current.recommendation == null) {
+        final initial = await reference.evaluate(current.harvestCase);
+        if (!ref.mounted || generation != _generation) return;
+        state = AsyncData(
+          CaseSession(
+            harvestCase: current.harvestCase,
+            recommendation: initial,
+            refreshing: true,
+          ),
+        );
+      }
       final result = await repository.evaluate(current.harvestCase);
       if (!ref.mounted || generation != _generation) return;
       state = AsyncData(
@@ -125,8 +191,12 @@ class SessionController extends Notifier<AsyncValue<CaseSession?>> {
       state = AsyncData(
         CaseSession(
           harvestCase: current.harvestCase,
-          recommendation: current.recommendation,
-          issue: error is AppFailure ? error.code : 'estimate_unavailable',
+          recommendation: state.value?.recommendation ?? current.recommendation,
+          issue: (state.value?.recommendation?.isReference ?? false)
+              ? null
+              : error is AppFailure
+              ? error.code
+              : 'estimate_unavailable',
         ),
       );
     }

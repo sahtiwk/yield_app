@@ -63,6 +63,47 @@ class TestRecommendations implements RecommendationRepository {
 }
 
 void main() {
+  for (final language in ['English', 'Hindi', 'Tamil', 'Telugu']) {
+    testWidgets('Saving $language returns home and localizes market content', (
+      tester,
+    ) async {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const HarvestTwinApp(),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byIcon(Icons.settings_outlined).first);
+      await tester.pumpAndSettle();
+      await tapVisible(
+        tester,
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is RadioListTile<String> && widget.value == language,
+        ),
+      );
+      final t = AppStrings(language);
+      await tapVisible(tester, find.text(t('Save')));
+      expect(container.read(preferencesProvider).language, language);
+      expect(find.text(t('Your workspace')), findsOneWidget);
+      expect(find.text(t('hyderabad_prices')), findsOneWidget);
+      expect(find.text(t('Choose your language')), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+  }
+  test('Provider labels never fall back to English in other languages', () {
+    for (final language in ['Hindi', 'Tamil', 'Telugu']) {
+      final t = AppStrings(language);
+      expect(
+        t.externalLabel('Untranslated incoming market', 'market_destination'),
+        t('market_destination'),
+      );
+      expect(t.externalLabel('Arka Rakshak', 'Variety'), isNot('Arka Rakshak'));
+    }
+  });
   testWidgets(
     'Current location captures coordinates without manual fields or a plan',
     (tester) async {
@@ -101,7 +142,7 @@ void main() {
       expect(draft.longitude, 78.5);
       expect(draft.currentPlan, isEmpty);
       await tapVisible(tester, find.text('Confirm facts & see recommendation'));
-      expect(find.text('Harvest saved'), findsOneWidget);
+      expect(find.text('Published price reference'), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );
@@ -112,7 +153,7 @@ void main() {
     }
   });
   testWidgets(
-    'Registration validates, saves and shows a truthful unavailable state',
+    'Registration validates, saves and shows a dated crop price reference',
     (tester) async {
       final container = ProviderContainer(
         overrides: [
@@ -152,10 +193,14 @@ void main() {
       await tapVisible(tester, find.text('Review facts'));
       expect(find.text('725 kg'), findsOneWidget);
       await tapVisible(tester, find.text('Confirm facts & see recommendation'));
-      expect(find.text('Harvest saved'), findsOneWidget);
+      expect(find.text('Published price reference'), findsOneWidget);
       expect(
-        container.read(sessionProvider).requireValue!.recommendation,
-        isNull,
+        container
+            .read(sessionProvider)
+            .requireValue!
+            .recommendation!
+            .isReference,
+        true,
       );
       expect(find.textContaining('Demo'), findsNothing);
       expect(tester.takeException(), isNull);
@@ -227,7 +272,7 @@ void main() {
     await tapVisible(tester, find.text('My Cases').first);
     expect(find.text('No harvests yet'), findsOneWidget);
     await tapVisible(tester, find.text('Home').last);
-    await tapVisible(tester, find.text('Market Prices'));
+    await tapVisible(tester, find.text('Market Prices').first);
     expect(
       find.text(const AppStrings('English')('No prices available')),
       findsOneWidget,

@@ -74,10 +74,19 @@ Official setup: [Supabase Google Auth](https://supabase.com/docs/guides/auth/soc
 - Market prices: dated observations with provenance, honest empty/error states.
 - Live recommendations: estimates, baseline, alternatives and expandable assumptions.
 - Live monitor: manual refresh and one-minute polling while visible and foregrounded. Failed refreshes retain the previous estimate with a warning; there are no simulated alerts.
+- Monitor timing: select a saved harvest, then update Harvested / Harvest planned / Standing crop and its date/time. The same case is updated through the transactional Supabase RPC, or `harvest_cases_v1` in local preferences when offline. Completed harvests cannot be set in the future. Price details and the decision tree expand only on request.
 
 Decisions and Monitor use the same localized view in English, Hindi, Tamil and Telugu, including rankings, assumptions, error states, timestamps, currency and quantities. Proper names and source names retain their original spelling. Native-speaker editorial review is still recommended. Voice recording/playback is not implemented. No crop vision model is used.
 
 ## Reference data
+
+Home includes a separately labeled, published Bowenpally price reference from 14 September 2026 (ACROP's Agmarknet-derived report): tomato INR 10/kg, okra 16.69/kg, brinjal 12.65/kg, onion 35/kg and potato 11/kg. These historical wholesale observations are not live offers and are never passed to the value engine. [Source](https://acrop.app/mandi/telangana/hyderabad/bowenpally).
+
+Decisions immediately shows quantity times the crop's published reference price while live evaluation loads or when it is unavailable. This is explicitly gross reference value, not net profit: no invented transport, buyer, weather, loss or income-improvement figures are included. The quote, crop ID and quantity are persisted locally under `reference_quote_<case-id>`. Reopening a saved case deterministically recalculates this reference; live results replace it only after successful evaluation. The existing mock repository file is not wired into the application.
+
+Decisions and Monitor draw a pathway from the saved crop, location availability, quality and actual evaluated options. Missing data remains explicit; no randomized live results or fabricated telemetry are generated. Next-crop guidance is general rotation advice, not a forecast, based on [TNAU crop selection guidance](https://agritech.tnau.ac.in/agriculture/agri_cropselect.html). It still needs local soil, season, irrigation and disease-history review.
+
+Saving a language returns Home after the save succeeds. Crop varieties and canonical provider messages are localized. Unknown provider names use a localized generic label rather than leaking English text; source URLs and farmer-entered text remain unchanged. This is not automatic machine translation of arbitrary incoming text.
 
 Migration `20260919000300_reference_catalog_and_buyers.sql` adds tomato, okra, brinjal, onion and potato with three named varieties each, reference temperatures and planning shelf lives. Matching local catalog data supports offline registration. The decay coefficients are explicitly unreviewed planning assumptions, not measured cultivar-specific coefficients. The recommendation service rejects placeholder/unreviewed models until calibrated parameters and citations are supplied. Reviewed existing models are preserved.
 
